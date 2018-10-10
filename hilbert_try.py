@@ -27,9 +27,8 @@ raw = mne.io.read_raw_fif(raw_fname, preload=True)
 raw = mne.io.RawArray(raw.get_data(), raw.info)
 
 # Picks
-picks = mne.pick_types(raw.info,
-                       meg=True, stim=False,
-                       eeg=False, eog=False,
+picks = mne.pick_types(raw.info, meg=True,
+                       eeg=False, eog=False, stim=False,
                        exclude='bads')
 
 # Filter data
@@ -43,7 +42,7 @@ event_ids = dict(ort1=2, ort2=6, ort3=9, ort4=14, ort5=17, ort6=33)
 
 # raw issues
 info = raw.info
-reject = dict(grad=4000e-13)
+reject = dict(mag=5e-12, grad=4000e-13)
 
 
 def get_epochs(raw_object, event_id, picks=picks,
