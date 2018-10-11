@@ -21,14 +21,18 @@ fname_list = [
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTraining_5_raw_tsss.fif',
 ]
 
+idx2angle = {2: '15', 6: '45', 9: '75',
+             14: '105', 17: '135', 33: '165'}
+
 event_ids = dict(ort015=2,  ort045=6,  ort075=9,
                  ort105=14, ort135=17, ort165=33)
-event_ids = dict(ort1=2, ort2=14)
+
+event_ids = dict(ort1=2, ort2=6)
 
 freq_l, freq_h = 1, 15
 
-data_all = []
-label_all = []
+data_raw = []
+label_raw = []
 
 for j in range(5):
     fname = fname_list[j]
@@ -37,16 +41,8 @@ for j in range(5):
     raw.filter(freq_l, freq_h, fir_design='firwin')
     raw_custom = mne.io.RawArray(get_envlop(raw.get_data(), picks), raw.info)
     epochs = get_epochs(raw_custom, event_ids, picks)
-    data_all.append(epochs.get_data())
-    label_all.append(epochs.events[:, 2])
-
-# Seperate datasets into train and test, test
-test_idx = 1
-data_test = data_all.pop(test_idx)
-label_test = label_all.pop(test_idx)
-# Seperate datasets into train and test, train
-data_train = data_all.pop()
-label_train = label_all.pop()
+    data_raw.append(epochs.get_data())
+    label_raw.append(epochs.events[:, 2])
 
 
 def stack_3Ddata(a, b):
@@ -57,37 +53,53 @@ def stack_3Ddata(a, b):
                       b.reshape(sb[0], sb[1]*sb[2]))).reshape(sa[0]+sb[0], sa[1], sa[2])
 
 
-while data_all.__len__():
-    data_train = stack_3Ddata(data_train, data_all.pop())
-    label_train = np.hstack((label_train, label_all.pop()))
-
 # Init pca and ica object
 pca = UnsupervisedSpatialFilter(PCA(30), average=False)
 ica = UnsupervisedSpatialFilter(FastICA(30), average=False)
 
-# Fit pca model for train dataset (fitting) and test dataset (transforming)
-train_data = pca.fit_transform(data_train)
-test_data = pca.transform(data_test)
 
-# We will train and test using leave one run out protocal
-# and test on all directions from the leaved run.
-clf = make_pipeline(StandardScaler(), LogisticRegression())
-# Scoring='roc_auc' can only be used in two-classes classification
-n_jobs = 5  # para on 5
-time_gen = GeneralizingEstimator(clf, scoring='roc_auc', n_jobs=n_jobs)
+scores_cv = []
+for test_idx in range(5):
+    print('crossing validation in %d' % test_idx)
+    # Seperate datasets into train and test, test
+    data_all = data_raw.copy()
+    label_all = label_raw.copy()
+    data_test = data_all.pop(test_idx)
+    label_test = label_all.pop(test_idx)
+    # Seperate datasets into train and test, train
+    data_train = data_all.pop()
+    label_train = label_all.pop()
 
-# Fit classifiers on the epochs.
-# Note that the experimental condition y indicates directions
-time_gen.fit(X=data_train, y=label_train)
+    while data_all.__len__():
+        data_train = stack_3Ddata(data_train, data_all.pop())
+        label_train = np.hstack((label_train, label_all.pop()))
 
-# Score on the epochs
-scores = time_gen.score(X=data_test, y=label_test)
+    # Fit pca model for train dataset (fitting) and test dataset (transforming)
+    train_data = pca.fit_transform(data_train)
+    test_data = pca.transform(data_test)
 
+    # We will train and test using leave one run out protocal
+    # and test on all directions from the leaved run.
+    clf = make_pipeline(StandardScaler(), LogisticRegression())
+    # Scoring='roc_auc' can only be used in two-classes classification
+    n_jobs = 5  # para on 5
+    time_gen = GeneralizingEstimator(clf, scoring='roc_auc', n_jobs=n_jobs)
+
+    # Fit classifiers on the epochs.
+    # Note that the experimental condition y indicates directions
+    time_gen.fit(X=data_train, y=label_train)
+
+    # Score on the epochs
+    scores_ = time_gen.score(X=data_test, y=label_test)
+    scores_cv.append(scores_)
+
+# Mean scores
+scores = sum(e for e in scores_cv) / 5
 # Plotting layout
-fig, ax_layout = plt.subplots(1, 2)
+fig = plt.figure(figsize=(15, 6))
 
 # Plot Generalization over time
-ax = ax_layout[1]
+ax = fig.add_subplot(122)
 im = ax.matshow(scores, vmin=0, vmax=1., cmap='RdBu_r', origin='lower',
                 extent=epochs.times[[0, -1, 0, -1]])
 ax.axhline(0., color='k')
@@ -99,14 +111,16 @@ ax.set_title('Generalization across time and condition')
 plt.colorbar(im, ax=ax)
 
 # Plot Decoding over time
-ax = ax_layout[0]
+ax = fig.add_subplot(121)
 im = ax.plot(epochs.times, np.diag(scores), label='score')
 ax.axhline(.5, color='k', linestyle='--', label='chance')
 ax.set_xlabel('Times')
 ax.set_ylabel('AUC')
 ax.legend()
 ax.axvline(.0, color='k', linestyle='-')
-ax.set_title('Decoding MEG sensors over time')
+ax.set_title('Diag'+', '.join(idx2angle[e] for e in event_ids.values()))
 
 # Plotting
+plt.savefig('pics/cv5_'+'_'.join(idx2angle[e]
+                                 for e in event_ids.values())+'.png')
 plt.show()
