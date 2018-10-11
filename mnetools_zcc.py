@@ -46,7 +46,9 @@ def get_epochs(raw_object, event_id, picks,
                tmin=tmin, tmax=tmax,
                baseline=(tmin, 0),
                reject=reject, preload=True):
+    # Find events
     events = mne.find_events(raw_object)
+    # Get epochs on events
     epochs = mne.Epochs(raw_object,
                         events=events, event_id=event_id,
                         tmin=tmin, tmax=tmax,
@@ -56,7 +58,16 @@ def get_epochs(raw_object, event_id, picks,
 
 
 def plot_evoked(epochs):
+    # Plot colorful epochs
     data = epochs.get_data()
     data_mean = np.mean(data, axis=0)
     plt.plot(data_mean.transpose())
     plt.title(str(epochs.event_id))
+
+
+def stack_3Ddata(a, b):
+    # Stack 3D data on first dimension
+    sa = a.shape
+    sb = b.shape
+    return np.vstack((a.reshape(sa[0], sa[1]*sa[2]),
+                      b.reshape(sb[0], sb[1]*sb[2]))).reshape(sa[0]+sb[0], sa[1], sa[2])
