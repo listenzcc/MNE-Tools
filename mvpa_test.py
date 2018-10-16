@@ -27,7 +27,7 @@ idx2angle = {2: '15', 6: '45', 9: '75',
 event_ids = dict(ort015=2,  ort045=6,  ort075=9,
                  ort105=14, ort135=17, ort165=33)
 
-event_ids = dict(ort1=2, ort2=6)
+event_ids = dict(ort1=2, ort2=33)
 
 freq_l, freq_h = 1, 15
 
@@ -39,7 +39,8 @@ for j in range(5):
     print(fname)
     raw, picks = prepare_raw(fname)
     raw.filter(freq_l, freq_h, fir_design='firwin')
-    raw_custom = mne.io.RawArray(get_envlop(raw.get_data(), picks), raw.info)
+    # raw_custom = mne.io.RawArray(get_envlop(raw.get_data(), picks), raw.info)
+    raw_custom = mne.io.RawArray(raw.get_data(), raw.info)
     epochs = get_epochs(raw_custom, event_ids, picks)
     data_raw.append(epochs.get_data())
     label_raw.append(epochs.events[:, 2])
