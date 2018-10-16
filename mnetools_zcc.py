@@ -40,16 +40,17 @@ def prepare_raw(fname, meg=True,
 
 
 tmin, tmax = -0.25, 1.25
+decim = 10
 
 
 def get_epochs(raw_object, event_id, picks,
                tmin=tmin, tmax=tmax,
-               baseline=(tmin, 0),
+               baseline=(tmin, 0), decim=decim,
                reject=reject, preload=True):
     # Find events
     events = mne.find_events(raw_object)
     # Get epochs on events
-    epochs = mne.Epochs(raw_object,
+    epochs = mne.Epochs(raw_object, decim=10,
                         events=events, event_id=event_id,
                         tmin=tmin, tmax=tmax,
                         picks=picks, baseline=(tmin, 0),
