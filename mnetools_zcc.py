@@ -50,7 +50,7 @@ def get_epochs(raw_object, event_id, picks,
     # Find events
     events = mne.find_events(raw_object)
     # Get epochs on events
-    epochs = mne.Epochs(raw_object, decim=10,
+    epochs = mne.Epochs(raw_object, decim=decim,
                         events=events, event_id=event_id,
                         tmin=tmin, tmax=tmax,
                         picks=picks, baseline=(tmin, 0),
