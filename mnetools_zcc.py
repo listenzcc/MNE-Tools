@@ -68,6 +68,8 @@ def plot_evoked(epochs):
 
 def stack_3Ddata(a, b):
     # Stack 3D data on first dimension
+    if len(a) == 0:
+        return b
     sa = a.shape
     sb = b.shape
     return np.vstack((a.reshape(sa[0], sa[1]*sa[2]),

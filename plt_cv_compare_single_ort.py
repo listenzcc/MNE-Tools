@@ -7,11 +7,12 @@ import matplotlib.pyplot as plt
 
 ort_list = [15, 45, 75, 105, 135, 165]
 
-dir_target = 'cv_raw_lr_timeresolve'
-fname = 'scores_store.npy'
+dir_target = 'QYJcv10_env_pca_lrl1'
+score_fname = 'scores_store.npy'
+times_fname = 'epochs_times.npy'
 
-scores_store = np.load(os.path.join('pics', dir_target, fname))
-epochs_times = np.load(os.path.join('pics', 'epochs_times_decim_10.npy'))
+scores_store = np.load(os.path.join('pics', dir_target, score_fname))
+epochs_times = np.load(os.path.join('pics', dir_target, times_fname))
 
 
 def get_idx(j, k, n=2):
@@ -32,6 +33,7 @@ scores_diffs = []
 for j in range(6):
     scores_diffs.append([])
 
+# Plot all compares
 nrows, ncols = 3, 5
 fig, axes = plt.subplots(nrows=nrows, ncols=ncols)
 for j, axx in zip(range(nrows), axes):
@@ -53,6 +55,7 @@ for j, axx in zip(range(nrows), axes):
         scores_diffs[d] = stack(scores_diffs[d], scores)
 
 
+# Plot one ort vs others
 nrows, ncols = 2, 3
 fig, axes = plt.subplots(nrows=nrows, ncols=ncols)
 for j, axx in zip(range(nrows), axes):
@@ -67,6 +70,7 @@ for j, axx in zip(range(nrows), axes):
         ax.legend()
 
 
+# Plot ort diffs
 nrows, ncols = 2, 3
 fig, axes = plt.subplots(nrows=nrows, ncols=ncols)
 for j, axx in zip(range(nrows), axes):

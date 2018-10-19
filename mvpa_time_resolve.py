@@ -1,9 +1,16 @@
 # coding: utf-8
 
 import mne
+from mne.time_frequency import tfr_morlet
+from mne.decoding import GeneralizingEstimator
+from mne.decoding import UnsupervisedSpatialFilter
+from mne.decoding import (cross_val_multiscore, LinearModel, SlidingEstimator,
+                          get_coef)
+
 import numpy as np
 import matplotlib.pyplot as plt
-from mnetools_zcc import prepare_raw, get_envlop, get_epochs
+from mnetools_zcc import prepare_raw, get_envlop, get_epochs, stack_3Ddata
+from pick_good_sensors import good_sensors
 
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -12,10 +19,6 @@ from sklearn.svm import SVC, LinearSVC
 from sklearn.decomposition import PCA, FastICA
 from sklearn.feature_selection import SelectKBest, f_classif
 
-from mne.decoding import GeneralizingEstimator
-from mne.decoding import UnsupervisedSpatialFilter
-from mne.decoding import (cross_val_multiscore, LinearModel, SlidingEstimator,
-                          get_coef)
 
 import itertools
 
@@ -30,6 +33,31 @@ def smooth(x, picks, y=smooth_kernel):
     return x
 
 
+reject = dict(mag=5e-12, grad=4000e-13)
+tmin, tmax = -0.25, 1.25
+
+
+def epochs_data_2_power(raw, events, picks,
+                        tmin=tmin, tmax=tmax, reject=reject):
+    freqs = np.logspace(*np.log10([1, 5]), num=20)
+    n_cycles = freqs / 2.
+    data_out = []
+    for e in range(len(events[:, 2])):
+        event_ids = dict(x=events[e][2])
+        epochs = mne.Epochs(raw, np.reshape(events[e], (1, 3)), event_ids,
+                            tmin=tmin, tmax=tmax, picks=picks,
+                            baseline=(tmin, 0), reject=reject, preload=True)
+        power, itc = tfr_morlet(epochs, freqs=freqs, n_cycles=n_cycles,
+                                use_fft=True, return_itc=True,
+                                decim=1, n_jobs=6)
+        data_power = power.data.transpose((1, 0, 2))
+        shape = data_power.shape
+        data_out = stack_3Ddata(data_out, np.reshape(
+            np.mean(data_power, 0), (1, shape[1], shape[2])))
+    return data_out
+
+
+'''
 def stack_3Ddata(a, b):
     # Stack 3D data on first dimension
     if len(a) == 0:
@@ -38,7 +66,7 @@ def stack_3Ddata(a, b):
     sb = b.shape
     return np.vstack((a.reshape(sa[0], sa[1]*sa[2]),
                       b.reshape(sb[0], sb[1]*sb[2]))).reshape(sa[0]+sb[0], sa[1], sa[2])
-
+'''
 
 fname_list = [
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTraining_1_raw_tsss.fif',
@@ -46,6 +74,14 @@ fname_list = [
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTraining_3_raw_tsss.fif',
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTraining_4_raw_tsss.fif',
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTraining_5_raw_tsss.fif',
+]
+
+fname_list__ = [
+    'D:\\BeidaShuju\\rawdata\\ZYF\\MultiTraining_1_raw_tsss.fif',
+    'D:\\BeidaShuju\\rawdata\\ZYF\\MultiTraining_2_raw_tsss.fif',
+    'D:\\BeidaShuju\\rawdata\\ZYF\\MultiTraining_3_raw_tsss.fif',
+    'D:\\BeidaShuju\\rawdata\\ZYF\\MultiTraining_4_raw_tsss.fif',
+    'D:\\BeidaShuju\\rawdata\\ZYF\\MultiTraining_5_raw_tsss.fif',
 ]
 
 idx2angle = {2: '15', 6: '45', 9: '75',
@@ -64,6 +100,7 @@ for j in range(len(fname_list)):
     fname = fname_list[j]
     print(fname)
     raw, picks = prepare_raw(fname)
+    sensors, picks = good_sensors(raw.ch_names)
     raw.filter(freq_l, freq_h, fir_design='firwin')
     data_fif = []
     label_fif = []
@@ -71,13 +108,18 @@ for j in range(len(fname_list)):
         event_ids = dict()
         event_ids['ort'] = event_list[k]
         print(event_ids.items())
-        # raw_custom = mne.io.RawArray(smooth(raw.get_data(), picks), raw.info)
         raw_custom = mne.io.RawArray(
-            smooth(get_envlop(raw.get_data(), picks), picks), raw.info)
+            smooth(raw.get_data(), picks), raw.info)
+        # raw_custom = mne.io.RawArray(
+        #     smooth(get_envlop(raw.get_data(), picks), picks), raw.info)
 
-        epochs = get_epochs(raw_custom, event_ids, picks, decim=10)
+        epochs = get_epochs(raw_custom, event_ids, picks, decim=1)
         data_fif.append(epochs.get_data())
         label_fif.append(epochs.events[:, 2])
+
+        # data_fif.append(epochs_data_2_power(
+        #     raw_custom, epochs.events, picks=picks))
+
     data_all.append(data_fif)
     label_all.append(label_fif)
 
@@ -98,8 +140,10 @@ for pare in itertools.combinations([0, 1, 2, 3, 4, 5], r=n_class):
     print('.')
 
     clf = make_pipeline(StandardScaler(),  # z-score normalization
-                        LinearModel(LinearSVC(penalty='l2')))
-    # LinearModel(LogisticRegression(penalty='l1')))
+                        PCA(n_components=20),
+                        # LinearModel(LinearSVC(penalty='l2'))
+                        LinearModel(LogisticRegression(penalty='l1'))
+                        )
     time_decod = SlidingEstimator(clf, scoring='roc_auc')
     scores = cross_val_multiscore(time_decod, X, y, cv=10, n_jobs=6)
     scores_store.append([pare, scores])
@@ -113,5 +157,6 @@ for pare in itertools.combinations([0, 1, 2, 3, 4, 5], r=n_class):
     plt.legend()
     plt.savefig('pics/' + pic_name)
 
+np.save('pics/epochs_times', epochs.times)
 np.save('pics/scores_store', scores_store)
 plt.close('all')
