@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 ort_list = [15, 45, 75, 105, 135, 165]
 
-dir_target = 'QYJcv10_env_pca_lrl1'
+dir_target = 'QYJcv10_rawenv_pca30_lrl1'
 score_fname = 'scores_store.npy'
 times_fname = 'epochs_times.npy'
 

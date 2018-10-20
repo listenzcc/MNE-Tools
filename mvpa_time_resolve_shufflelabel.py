@@ -1,3 +1,4 @@
+
 # coding: utf-8
 
 import mne
@@ -113,22 +114,29 @@ for pare in itertools.combinations([0, 1, 2, 3, 4, 5], r=n_class):
     data_all_copy = data_all.copy()
     label_all_copy = label_all.copy()
 
-    X = []
-    y = []
-    for j in range(len(fname_list)):
-        for k in pare:
-            print('.', end='')
-            X = stack_3Ddata(X, data_all_copy[j][k])
-            y = np.hstack((y, label_all_copy[j][k]))
-    print('.')
-
     clf = make_pipeline(StandardScaler(),  # z-score normalization
                         PCA(n_components=30),
                         # LinearModel(LinearSVC(penalty='l2'))
                         LinearModel(LogisticRegression(penalty='l1'))
                         )
-    time_decod = SlidingEstimator(clf, scoring='roc_auc')
-    scores = cross_val_multiscore(time_decod, X, y, cv=10, n_jobs=6)
+
+    scores_shuffle = []
+    for shuff_ in range(100):
+        print(shuff_)
+        X = []
+        y = []
+        for j in range(len(fname_list)):
+            for k in pare:
+                print('.', end='')
+                X = stack_3Ddata(X, data_all_copy[j][k])
+                y = np.hstack((y, label_all_copy[j][k]))
+        print('.')
+
+        time_decod = SlidingEstimator(clf, scoring='roc_auc')
+        scores_shuffle.append(
+            cross_val_multiscore(time_decod, X, y, cv=10, n_jobs=6))
+
+    scores = np.vstack(scores_shuffle)
     scores_store.append([pare, scores])
 
     fig, ax = plt.subplots(1)
