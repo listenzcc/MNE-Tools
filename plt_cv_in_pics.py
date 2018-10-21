@@ -6,10 +6,8 @@ import matplotlib.pyplot as plt
 
 ort_list = [15, 45, 75, 105, 135, 165]
 
-dir_list = ['QYJcv10_env_pca_lrl1',
-            'QYJcv10_raw_pca_lrl1',
-            'QYJcv10_rawenv_pca_lrl1',
-            'QYJcv10_rawenv_pca30_lrl1']
+dir_list = ['QYJcv5_rawenv_pca_lrl1',
+            'ZYFcv5_rawenv_pca_lrl1']
 score_fname = 'scores_store.npy'
 times_fname = 'epochs_times.npy'
 

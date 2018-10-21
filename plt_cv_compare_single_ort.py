@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 ort_list = [15, 45, 75, 105, 135, 165]
 
-dir_target = 'QYJcv10_rawenv_pca30_lrl1'
+dir_target = 'QYJcv5_rawenv_pca_lrl1'
 score_fname = 'scores_store.npy'
 times_fname = 'epochs_times.npy'
 
@@ -53,6 +53,7 @@ for j, axx in zip(range(nrows), axes):
 
         d = pare[1]-pare[0]
         scores_diffs[d] = stack(scores_diffs[d], scores)
+        scores_diffs[0] = stack(scores_diffs[0], scores)
 
 
 # Plot one ort vs others
@@ -79,7 +80,8 @@ for j, axx in zip(range(nrows), axes):
         ax.set_title('%d, %d, %d' % (j, k, idx))
         scores = scores_diffs[idx]
         if len(scores) == 0:
-            continue
+            # continue
+            None
         ax.plot(epochs_times, scores.mean(0), label='roc')
         ax.axhline(.5, color='k', linestyle='--', label='chance')
         ax.axvline(0, color='k')
