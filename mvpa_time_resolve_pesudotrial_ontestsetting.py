@@ -34,7 +34,7 @@ def smooth(x, picks, y=smooth_kernel):
 
 
 reject = dict(mag=5e-12, grad=4000e-13)
-tmin, tmax = -0.25, 1.25
+tmin, tmax = -0.50, 1.25
 
 
 def epochs_data_2_power(raw, events, picks,
@@ -62,7 +62,7 @@ fname_list = [
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_1_raw_tsss.fif',
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_2_raw_tsss.fif',
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_3_raw_tsss.fif',
-    'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_4_raw_tsss.fif'
+    'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_4_raw_tsss.fif',
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_5_raw_tsss.fif',
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_6_raw_tsss.fif',
     'D:\\BeidaShuju\\rawdata\\QYJ\\MultiTest_7_raw_tsss.fif',
@@ -96,8 +96,12 @@ for j in range(len(fname_list)):
         raw_env = mne.io.RawArray(
             smooth(get_envlop(raw.get_data(), picks), picks), raw.info)
 
-        epochs = get_epochs(raw_raw, event_ids, picks, decim=1)
-        epochs_env = get_epochs(raw_env, event_ids, picks, decim=1)
+        epochs = get_epochs(raw_raw, event_ids, picks,
+                            tmin=tmin, tmax=tmax,
+                            baseline=(tmin, -0.25), decim=1)
+        epochs_env = get_epochs(raw_env, event_ids, picks,
+                                tmin=tmin, tmax=tmax,
+                                baseline=(tmin, -0.25), decim=1)
         data_fif.append(np.hstack(
             (epochs.get_data(), epochs_env.get_data())))
         # data_fif.append(epochs.get_data())
@@ -132,7 +136,7 @@ for pare in itertools.combinations([0, 1, 2, 3], r=n_class):
         np.random.shuffle(X_tmp)
         for uu in range(20):
             X = stack_3Ddata(X, np.reshape(
-                np.mean(X_tmp[uu*6+0:uu*6+6], 0), (1, 612, 1501)))
+                np.mean(X_tmp[uu*6+0:uu*6+6], 0), (1, 612, 1751)))
             y = np.hstack((y, u))
 
     # stophere
