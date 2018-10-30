@@ -62,6 +62,7 @@ raw_env = mne.io.RawArray(
     raw.info)
 
 pca = UnsupervisedSpatialFilter(PCA(30), average=False)
+ica = UnsupervisedSpatialFilter(FastICA(30), average=False)
 
 # get_epochs
 epochs = get_epochs(raw, event_ids, picks,
@@ -70,8 +71,12 @@ epochs = get_epochs(raw, event_ids, picks,
 
 data = epochs.get_data()
 
+print('PCA')
 data_pca = pca.fit_transform(data)
+print('ICA')
+data_ica = ica.fit_transform(data)
 
+print('Plotting')
 fig, axes = plt.subplots(3, 2)
 for j in range(len(event_list)):
     ort_idx = event_list[j]
@@ -80,5 +85,15 @@ for j in range(len(event_list)):
     axes[idx_h][idx_l].plot(
         epochs.times, np.mean(x, axis=0).transpose())
     axes[idx_h][idx_l].set_title(ort_idx)
+
+fig, axes = plt.subplots(3, 2)
+for j in range(len(event_list)):
+    ort_idx = event_list[j]
+    idx_h, idx_l = int(j/2), (j % 2)
+    x = data_ica[epochs.events[:, 2] == ort_idx]
+    axes[idx_h][idx_l].plot(
+        epochs.times, np.mean(x, axis=0).transpose())
+    axes[idx_h][idx_l].set_title(ort_idx)
+
 
 plt.show()
