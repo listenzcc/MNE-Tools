@@ -10,7 +10,8 @@ from mnetools_zcc import (prepare_raw,
                           get_envlop,
                           get_epochs)
 
-from sklearn.decomposition import PCA, FastICA
+from sklearn.decomposition import PCA, FastICA, SparsePCA
+from sklearn.preprocessing import normalize
 from mne.decoding import UnsupervisedSpatialFilter
 
 smooth_kernel = 1/200+np.array(range(200))*0
@@ -61,8 +62,10 @@ raw_env = mne.io.RawArray(
     smooth(get_envlop(raw.get_data(), picks), picks),
     raw.info)
 
-pca = UnsupervisedSpatialFilter(PCA(30), average=False)
-ica = UnsupervisedSpatialFilter(FastICA(30), average=False)
+average = False
+pca = UnsupervisedSpatialFilter(PCA(30), average=average)
+ica = UnsupervisedSpatialFilter(FastICA(30), average=average)
+spca = UnsupervisedSpatialFilter(SparsePCA(30, alpha=0.01), average=average)
 
 # get_epochs
 epochs = get_epochs(raw, event_ids, picks,
@@ -71,12 +74,39 @@ epochs = get_epochs(raw, event_ids, picks,
 
 data = epochs.get_data()
 
+
+def normalizedata(data=data):
+    shape = data.shape
+    dd = data.reshape(-1, shape[1])
+    return normalize(dd.transpose()).transpose().reshape(shape)
+
+
+data = normalizedata()
+
 print('PCA')
 data_pca = pca.fit_transform(data)
 print('ICA')
 data_ica = ica.fit_transform(data)
+print('sPCA')
+data_spca = spca.fit_transform(data)
+
+
+def plot(row, col, data, epochs=epochs, event_list=event_list):
+    fig, axes = plt.subplots(row, col)
+    for j in range(len(event_list)):
+        ort_idx = event_list[j]
+        idx_h, idx_l = int(j/col), (j % col)
+        x = data[epochs.events[:, 2] == ort_idx]
+        axes[idx_h][idx_l].plot(
+            epochs.times, np.mean(x, axis=0).transpose())
+        axes[idx_h][idx_l].set_title(ort_idx)
+
 
 print('Plotting')
+plot(3, 2, data_pca)
+plot(3, 2, data_ica)
+plot(3, 2, data_spca)
+'''
 fig, axes = plt.subplots(3, 2)
 for j in range(len(event_list)):
     ort_idx = event_list[j]
@@ -94,6 +124,6 @@ for j in range(len(event_list)):
     axes[idx_h][idx_l].plot(
         epochs.times, np.mean(x, axis=0).transpose())
     axes[idx_h][idx_l].set_title(ort_idx)
-
+'''
 
 plt.show()
