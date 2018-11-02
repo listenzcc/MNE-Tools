@@ -7,7 +7,9 @@ import mne
 import matplotlib.pyplot as plt
 from mne.preprocessing import ICA
 from mnetools_zcc import (prepare_raw, get_envlop, get_epochs,
-                          plot_evoked, reject)
+                          plot_evoked)
+
+reject = dict(mag=5e-12)
 
 smooth_kernel = 1/200+np.array(range(200))*0
 
@@ -48,7 +50,7 @@ else:
 freq_l, freq_h = 1, 15
 event_list = list(e for e in event_ids.values())
 
-raw, picks = prepare_raw(fname)
+raw, picks = prepare_raw(fname, meg='mag')
 raw.filter(freq_l, freq_h, fir_design='firwin')
 raw_raw = mne.io.RawArray(
     smooth(raw.get_data(), picks),
@@ -58,7 +60,7 @@ raw_env = mne.io.RawArray(
     raw.info)
 
 raw = raw_raw
-epochs = get_epochs(raw,
+epochs = get_epochs(raw, reject=reject,
                     event_id=event_ids, picks=picks,
                     tmin=tmin, tmax=tmax, baseline=(tmin, t0))
 labels = epochs.events[:, -1]
